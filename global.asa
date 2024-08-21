@@ -1,0 +1,66 @@
+<!--#include file="vbsjson.asp"-->
+<!--#include file="base64decode.asp"-->
+<script language="vbscript" runat="server">
+'//===============================================================================
+'// Microsoft FastTrack for Azure
+'// Azure AD Classic ASP Authentication Sample
+'// *** Must be used in conjunction with Azure App Service authentication ***
+'//===============================================================================
+'// Copyright © Microsoft Corporation.  All rights reserved.
+'// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY
+'// OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT
+'// LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+'// FITNESS FOR A PARTICULAR PURPOSE.
+'//===============================================================================
+
+sub Application_OnStart
+    Dim WshShell
+    Dim WshSysEnv
+
+    Set WshShell = Server.CreateObject("WScript.Shell")
+    Set WshSysEnv = WshShell.Environment("PROCESS")
+
+    Application("HOSTING_ENVIRONMENT") = WshSysEnv("HOSTING_ENVIRONMENT")
+    Application("DOMAIN_NAME") = WshSysEnv("APPSETTING_DOMAIN_NAME")
+    Application("CONTAINER") = WshSysEnv("APPSETTING_CONTAINER")
+    Application("DOMAIN_USERNAME") = WshSysEnv("APPSETTING_DOMAIN_USERNAME")
+    Application("DOMAIN_PASSWORD") = WshSysEnv("APPSETTING_DOMAIN_PASSWORD")
+    Application("MY_CONNECTION_STRING") = WshSysEnv("SQLAZURECONNSTR_MY_CONNECTION_STRING")
+    
+    ' Cleanup
+    Set WshSysEnv = Nothing
+    Set WshShell = Nothing
+end sub
+
+sub Application_OnEnd
+'some code
+end sub
+
+sub Session_OnStart
+    Dim clientPrincipal
+    Dim json
+    Dim o
+    
+    If Application("HOSTING_ENVIRONMENT") = "Azure" Then
+        clientPrincipal = Base64Decode(Request.ServerVariables("HTTP_X_MS_CLIENT_PRINCIPAL"))
+        Set json = New VbsJson
+        Set o = json.Decode(clientPrincipal)
+        For Each objClaim in o("claims")
+            If objClaim("typ") = "preferred_username" Then
+                Session("LOGON_USER") = objClaim("val")
+            End If
+        Next
+    Else
+        Session("LOGON_USER") = Request.ServerVariables("LOGON_USER")
+    End If
+    
+    ' Cleanup
+    Set o = Nothing
+    Set json = Nothing
+end sub
+
+sub Session_OnEnd
+'some code
+end sub
+
+</script>
